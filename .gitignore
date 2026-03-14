@@ -1,0 +1,10 @@
+# Generated Xcode project (recreate with: xcodegen generate)
+ActionBar.xcodeproj/
+
+# Xcode
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# macOS
+.DS_Store

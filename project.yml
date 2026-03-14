@@ -1,0 +1,26 @@
+name: ActionBar
+
+options:
+  deploymentTarget:
+    macOS: "26.0"
+
+targets:
+  ActionBar:
+    type: application
+    platform: macOS
+    sources:
+      - path: .
+        includes:
+          - "*.swift"
+      - path: Assets.xcassets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.rafaelalex.ActionBar
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: ActionBar.entitlements
+        PRODUCT_NAME: ActionBar
+        SWIFT_VERSION: "5.0"
+    info:
+      path: Info.plist
+      properties:
+        LSUIElement: true
