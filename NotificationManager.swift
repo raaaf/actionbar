@@ -45,7 +45,13 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
         content.title = repoName
         content.body = "\(run.resolvedName) \(conclusionText)"
-        content.sound = .default
+
+        if run.conclusion == .failure {
+            content.interruptionLevel = .critical
+            content.sound = .defaultCritical
+        } else {
+            content.sound = .default
+        }
 
         // Store the HTML URL so we can open it when clicked
         content.userInfo = ["url": run.htmlUrl]

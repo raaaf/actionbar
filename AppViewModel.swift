@@ -49,9 +49,8 @@ final class AppViewModel: ObservableObject {
             return Self.loadingFrames[loadingFrame % Self.loadingFrames.count]
         }
 
-        if failureCount > 0 { return "xmark.circle.fill" }
-        if runs.contains(where: { $0.status == .inProgress }) { return "circle.dotted.circle" }
-        return "checkmark.circle.fill"
+        guard let latest = runs.first else { return "checkmark.circle.fill" }
+        return latest.sfSymbol
     }
 
     // MARK: - Init
