@@ -26,7 +26,7 @@ actor GitHubService {
 
     func fetchRecentRepos(limit: Int = 30) async throws -> [Repository] {
         let url = "\(baseURL)/user/repos?sort=pushed&direction=desc&per_page=\(limit)&type=all"
-        let data = try await request(url: url)
+        let data = try await perform(url: url)
         return try decoder.decode([Repository].self, from: data)
     }
 
@@ -34,7 +34,7 @@ actor GitHubService {
 
     func fetchRuns(repo: String, perPage: Int = 5) async throws -> [WorkflowRun] {
         let url = "\(baseURL)/repos/\(repo)/actions/runs?per_page=\(perPage)"
-        let data = try await request(url: url)
+        let data = try await perform(url: url)
         let response = try decoder.decode(WorkflowRunsResponse.self, from: data)
         return response.workflowRuns
     }
@@ -86,15 +86,17 @@ actor GitHubService {
     // MARK: - Re-run workflow
 
     func rerunWorkflow(owner: String, repo: String, runId: Int) async throws {
-        let url = "\(baseURL)/repos/\(owner)/\(repo)/actions/runs/\(runId)/rerun"
-        _ = try await postRequest(url: url)
+        let encodedOwner = owner.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? owner
+        let encodedRepo = repo.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? repo
+        let url = "\(baseURL)/repos/\(encodedOwner)/\(encodedRepo)/actions/runs/\(runId)/rerun"
+        _ = try await perform(url: url, method: "POST")
     }
 
     // MARK: - Validate token
 
     func validateToken() async throws -> String {
         let url = "\(baseURL)/user"
-        let data = try await request(url: url)
+        let data = try await perform(url: url)
 
         struct User: Codable { let login: String }
         let user = try decoder.decode(User.self, from: data)
@@ -103,43 +105,13 @@ actor GitHubService {
 
     // MARK: - HTTP
 
-    private func postRequest(url urlString: String) async throws -> Data {
+    private func perform(url urlString: String, method: String = "GET") async throws -> Data {
         guard let url = URL(string: urlString) else {
             throw GitHubError.invalidURL
         }
 
         var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
-
-        let (data, response) = try await session.data(for: request)
-
-        guard let http = response as? HTTPURLResponse else {
-            throw GitHubError.invalidResponse
-        }
-
-        switch http.statusCode {
-        case 200...299:
-            return data
-        case 401:
-            throw GitHubError.unauthorized
-        case 403:
-            throw GitHubError.rateLimited
-        case 404:
-            throw GitHubError.notFound
-        default:
-            throw GitHubError.httpError(http.statusCode)
-        }
-    }
-
-    private func request(url urlString: String) async throws -> Data {
-        guard let url = URL(string: urlString) else {
-            throw GitHubError.invalidURL
-        }
-
-        var request = URLRequest(url: url)
+        request.httpMethod = method
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")

@@ -48,6 +48,16 @@ struct WorkflowRun: Codable, Identifiable, Hashable {
         repository?.fullName ?? "unknown/repo"
     }
 
+    var repoOwner: String {
+        let parts = repoFullName.split(separator: "/")
+        return parts.count >= 1 ? String(parts[0]) : ""
+    }
+
+    var repoName: String {
+        let parts = repoFullName.split(separator: "/")
+        return parts.count >= 2 ? String(parts[1]) : ""
+    }
+
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }

@@ -131,10 +131,9 @@ final class AppViewModel: ObservableObject {
     func rerunWorkflow(_ run: WorkflowRun) async {
         guard let service = service else { return }
 
-        let parts = run.repoFullName.split(separator: "/")
-        guard parts.count == 2 else { return }
-        let owner = String(parts[0])
-        let repo = String(parts[1])
+        let owner = run.repoOwner
+        let repo = run.repoName
+        guard !owner.isEmpty, !repo.isEmpty else { return }
 
         isRerunning.insert(run.id)
         do {
@@ -187,10 +186,10 @@ final class AppViewModel: ObservableObject {
             }
         }
 
-        // Prune old IDs to prevent memory growth
+        // Prune old IDs to prevent memory growth — keep the most recent 300
         if completedRunIDs.count > 500 {
-            let activeIDs = Set(newRuns.map(\.id))
-            completedRunIDs = completedRunIDs.intersection(activeIDs)
+            let sortedIDs = completedRunIDs.sorted()
+            completedRunIDs = Set(sortedIDs.suffix(300))
         }
     }
 

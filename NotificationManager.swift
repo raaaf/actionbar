@@ -47,8 +47,8 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         content.body = "\(run.resolvedName) \(conclusionText)"
 
         if run.conclusion == .failure {
-            content.interruptionLevel = .critical
-            content.sound = .defaultCritical
+            content.interruptionLevel = .timeSensitive
+            content.sound = .default
         } else {
             content.sound = .default
         }
