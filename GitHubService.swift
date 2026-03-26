@@ -41,30 +41,53 @@ actor GitHubService {
 
     // MARK: - Fetch runs across all recent repos
 
-    func fetchAllRuns(maxRepos: Int = 20, runsPerRepo: Int = 3) async throws -> [WorkflowRun] {
+    struct FetchResult {
+        let runs: [WorkflowRun]
+        let failedRepos: [String]
+    }
+
+    func fetchAllRuns(maxRepos: Int = 20, runsPerRepo: Int = 3) async throws -> FetchResult {
         let repos = try await fetchRecentRepos(limit: maxRepos)
         var allRuns: [WorkflowRun] = []
+        var failedRepos: [String] = []
 
-        // Fetch runs concurrently with TaskGroup
-        try await withThrowingTaskGroup(of: [WorkflowRun].self) { group in
+        await withTaskGroup(of: (String, Result<[WorkflowRun], Error>).self) { group in
             for repo in repos {
                 group.addTask {
                     do {
-                        return try await self.fetchRuns(repo: repo.fullName, perPage: runsPerRepo)
+                        let runs = try await self.fetchRuns(repo: repo.fullName, perPage: runsPerRepo)
+                        return (repo.fullName, .success(runs))
                     } catch {
-                        // Repo might not have Actions enabled — skip silently
-                        return []
+                        return (repo.fullName, .failure(error))
                     }
                 }
             }
 
-            for try await runs in group {
-                allRuns.append(contentsOf: runs)
+            for await (repoName, result) in group {
+                switch result {
+                case .success(let runs):
+                    allRuns.append(contentsOf: runs)
+                case .failure(let error):
+                    // 404 means no Actions enabled — not a real error
+                    if let ghError = error as? GitHubError, ghError == .notFound {
+                        continue
+                    }
+                    failedRepos.append(repoName)
+                }
             }
         }
 
-        // Sort by most recent first
-        return allRuns.sorted { $0.updatedAt > $1.updatedAt }
+        return FetchResult(
+            runs: allRuns.sorted { $0.updatedAt > $1.updatedAt },
+            failedRepos: failedRepos
+        )
+    }
+
+    // MARK: - Re-run workflow
+
+    func rerunWorkflow(owner: String, repo: String, runId: Int) async throws {
+        let url = "\(baseURL)/repos/\(owner)/\(repo)/actions/runs/\(runId)/rerun"
+        _ = try await postRequest(url: url)
     }
 
     // MARK: - Validate token
@@ -79,6 +102,37 @@ actor GitHubService {
     }
 
     // MARK: - HTTP
+
+    private func postRequest(url urlString: String) async throws -> Data {
+        guard let url = URL(string: urlString) else {
+            throw GitHubError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let http = response as? HTTPURLResponse else {
+            throw GitHubError.invalidResponse
+        }
+
+        switch http.statusCode {
+        case 200...299:
+            return data
+        case 401:
+            throw GitHubError.unauthorized
+        case 403:
+            throw GitHubError.rateLimited
+        case 404:
+            throw GitHubError.notFound
+        default:
+            throw GitHubError.httpError(http.statusCode)
+        }
+    }
 
     private func request(url urlString: String) async throws -> Data {
         guard let url = URL(string: urlString) else {
@@ -111,7 +165,7 @@ actor GitHubService {
     }
 }
 
-enum GitHubError: LocalizedError {
+enum GitHubError: LocalizedError, Equatable {
     case invalidURL
     case invalidResponse
     case unauthorized

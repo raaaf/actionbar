@@ -12,6 +12,9 @@ final class AppViewModel: ObservableObject {
     @Published var lastRefresh: Date?
     @Published var isAuthenticated = false
     @Published var runsByRepo: [(repoName: String, runs: [WorkflowRun])] = []
+    @Published var loadingFrame: Int = 0
+    @Published var failedRepos: [String] = []
+    @Published var isRerunning: Set<Int> = []
 
     // MARK: - Settings
 
@@ -24,23 +27,30 @@ final class AppViewModel: ObservableObject {
 
     private var service: GitHubService?
     private var pollTimer: Timer?
+    private var loadingTimer: Timer?
     private var completedRunIDs: Set<Int> = [] // Track runs we've already notified about
+
+    // Three distinct circular frames — no duplicates, even visual rhythm
+    private static let loadingFrames = [
+        "circle.dashed",
+        "circle.dotted.and.circle",
+        "circle.dotted.circle",
+    ]
 
     // MARK: - Computed
 
+    var failureCount: Int {
+        runs.count { $0.status == .completed && $0.conclusion == .failure }
+    }
+
     var menuBarIcon: String {
         if !isAuthenticated { return "gearshape" }
-        if isLoading { return "arrow.triangle.2.circlepath" }
-
-        var hasFailure = false
-        var hasInProgress = false
-        for run in runs {
-            if run.status == .completed && run.conclusion == .failure { hasFailure = true; break }
-            if run.status == .inProgress { hasInProgress = true }
+        if isLoading {
+            return Self.loadingFrames[loadingFrame % Self.loadingFrames.count]
         }
 
-        if hasFailure { return "xmark.circle.fill" }
-        if hasInProgress { return "circle.dotted.circle" }
+        if failureCount > 0 { return "xmark.circle.fill" }
+        if runs.contains(where: { $0.status == .inProgress }) { return "circle.dotted.circle" }
         return "checkmark.circle.fill"
     }
 
@@ -91,20 +101,22 @@ final class AppViewModel: ObservableObject {
         guard let service = service else { return }
 
         isLoading = true
+        startLoadingAnimation()
         error = nil
 
         do {
-            let newRuns = try await service.fetchAllRuns(
+            let result = try await service.fetchAllRuns(
                 maxRepos: maxRepos,
                 runsPerRepo: runsPerRepo
             )
 
             // Detect newly completed runs for notifications
             if notificationsEnabled {
-                checkForCompletedRuns(newRuns: newRuns)
+                checkForCompletedRuns(newRuns: result.runs)
             }
 
-            runs = newRuns
+            runs = result.runs
+            failedRepos = result.failedRepos
             updateRunsByRepo()
             lastRefresh = .now
         } catch {
@@ -112,6 +124,29 @@ final class AppViewModel: ObservableObject {
         }
 
         isLoading = false
+        stopLoadingAnimation()
+    }
+
+    // MARK: - Re-run
+
+    func rerunWorkflow(_ run: WorkflowRun) async {
+        guard let service = service else { return }
+
+        let parts = run.repoFullName.split(separator: "/")
+        guard parts.count == 2 else { return }
+        let owner = String(parts[0])
+        let repo = String(parts[1])
+
+        isRerunning.insert(run.id)
+        do {
+            try await service.rerunWorkflow(owner: owner, repo: repo, runId: run.id)
+            // Brief delay so GitHub can register the new run
+            try? await Task.sleep(for: .seconds(2))
+            await refresh()
+        } catch {
+            self.error = "Re-run failed: \(error.localizedDescription)"
+        }
+        isRerunning.remove(run.id)
     }
 
     // MARK: - Polling
@@ -162,6 +197,26 @@ final class AppViewModel: ObservableObject {
 
     // MARK: - Private
 
+    private func startLoadingAnimation() {
+        loadingFrame = 0
+        loadingTimer?.invalidate()
+        loadingTimer = Timer.scheduledTimer(
+            withTimeInterval: 0.6,
+            repeats: true
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.loadingFrame = (self.loadingFrame + 1) % Self.loadingFrames.count
+            }
+        }
+    }
+
+    private func stopLoadingAnimation() {
+        loadingTimer?.invalidate()
+        loadingTimer = nil
+        loadingFrame = 0
+    }
+
     private func setupService(token: String) {
         let service = GitHubService(token: token)
         self.service = service
@@ -189,7 +244,7 @@ final class AppViewModel: ObservableObject {
     private func updateRunsByRepo() {
         let grouped = Dictionary(grouping: runs) { $0.repoFullName }
         runsByRepo = grouped
-            .map { (repoName: $0.key, runs: $0.value) }
+            .map { (repoName: $0.key, runs: $0.value.sorted { $0.updatedAt > $1.updatedAt }) }
             .sorted { a, b in
                 let aDate = a.runs.first?.updatedAt ?? .distantPast
                 let bDate = b.runs.first?.updatedAt ?? .distantPast

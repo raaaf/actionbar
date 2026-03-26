@@ -16,30 +16,38 @@ ActionBar is a macOS menu bar app (SwiftUI) that monitors GitHub Actions workflo
 
 ```bash
 xcodegen generate
-open ActionBar.xcodeproj
+xcodebuild -project ActionBar.xcodeproj -scheme ActionBar -configuration Release -derivedDataPath build -allowProvisioningUpdates -allowProvisioningDeviceRegistration build
+cp -R build/Build/Products/Release/ActionBar.app /Applications/
 ```
 
-Then build with Cmd+R. The project uses [XcodeGen](https://github.com/yonaskolb/XcodeGen) to generate `ActionBar.xcodeproj` from `project.yml`. There is no SPM, CocoaPods, or other dependency manager — zero external runtime dependencies.
+Or open `ActionBar.xcodeproj` in Xcode and build with Cmd+R. The project uses [XcodeGen](https://github.com/yonaskolb/XcodeGen) to generate `ActionBar.xcodeproj` from `project.yml`. There is no SPM, CocoaPods, or other dependency manager — zero external runtime dependencies.
+
+- **Apple Developer Team:** `9LA5969PJ2`
+- **Code Signing:** Automatic, Hardened Runtime enabled
+- **PAT type:** Classic PAT with `repo` + `workflow` scopes (covers personal + org repos)
 
 ## Architecture
 
 The app follows a simple MVVM pattern — all in a flat file structure at the repo root:
 
-- **ActionBarApp.swift** — `@main` entry point. Creates `MenuBarExtra` scene.
-- **AppViewModel.swift** — `@MainActor ObservableObject`. Owns all app state: auth, polling timer, runs list, notification tracking. Uses `@AppStorage` for user preferences (polling interval, max repos, runs per repo, notifications toggle).
-- **GitHubService.swift** — Swift `actor` wrapping GitHub REST API. Fetches repos (`/user/repos`), workflow runs (`/repos/{owner}/{repo}/actions/runs`), validates tokens (`/user`). Uses `TaskGroup` for concurrent per-repo fetching.
+- **ActionBarApp.swift** — `@main` entry point. Creates `MenuBarExtra` scene with failure-count badge.
+- **AppViewModel.swift** — `@MainActor ObservableObject`. Owns all app state: auth, polling timer, runs list, notification tracking, re-run state. Uses `@AppStorage` for user preferences (polling interval, max repos, runs per repo, notifications toggle).
+- **GitHubService.swift** — Swift `actor` wrapping GitHub REST API. Fetches repos (`/user/repos`), workflow runs (`/repos/{owner}/{repo}/actions/runs`), re-runs workflows (`POST .../rerun`), validates tokens (`/user`). Returns partial results with error tracking via `FetchResult`.
 - **GitHubModels.swift** — Codable structs (`WorkflowRun`, `Repository`, `RunRepository`) and enums (`RunStatus`, `RunConclusion`). Includes display helpers (SF Symbols, colors, time formatting) as extensions on `WorkflowRun`.
 - **KeychainHelper.swift** — Thin wrapper around Security framework for PAT storage (`kSecClassGenericPassword`).
 - **NotificationManager.swift** — Singleton managing `UNUserNotificationCenter`. Sends notifications on run completion, opens GitHub URL on click.
-- **MenuBarView.swift** — Main popup view: shows auth prompt, loading state, empty state, or grouped run list.
-- **RunRowView.swift** — Single workflow run row with status icon, branch, event, and time ago.
+- **MenuBarView.swift** — Main popup view: shows auth prompt, loading state, empty state, error banners, or grouped run list. Includes `RepoHeaderView` (clickable, opens repo on GitHub).
+- **RunRowView.swift** — Single workflow run row with status icon, branch, event, time ago. Hover reveals action buttons (re-run, open in GitHub).
 - **SettingsView.swift** — Tabbed settings window (General + About). Token input, polling config, notification toggle.
 - **SettingsWindowController.swift** — AppKit-based window controller for opening Settings from `MenuBarExtra` context.
 
 ## Key Patterns
 
 - `GitHubService` is a Swift actor — all API calls are async and thread-safe
+- `fetchAllRuns()` returns `FetchResult` with partial results — failed repos are tracked separately, 404s (no Actions) are silently skipped
 - Notifications only fire for runs that **transition** to completed (not on first load) — tracked via `completedRunIDs` set in `AppViewModel`
 - PAT is stored in macOS Keychain, never in UserDefaults or on disk
 - App Sandbox is enabled with outgoing network + keychain entitlements (`ActionBar.entitlements`)
 - GitHub API version header: `X-GitHub-Api-Version: 2022-11-28`
+- Menu bar icon shows failure count badge when there are failed runs
+- Runs are sorted by `updatedAt` descending, both globally and within each repo group

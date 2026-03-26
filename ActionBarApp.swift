@@ -9,7 +9,7 @@ struct ActionBarApp: App {
             MenuBarView(viewModel: viewModel)
         } label: {
             Label {
-                Text("ActionBar")
+                Text(viewModel.failureCount > 0 ? "\(viewModel.failureCount)" : "")
             } icon: {
                 Image(systemName: viewModel.menuBarIcon)
             }

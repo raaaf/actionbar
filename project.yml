@@ -20,6 +20,8 @@ targets:
         CODE_SIGN_ENTITLEMENTS: ActionBar.entitlements
         PRODUCT_NAME: ActionBar
         SWIFT_VERSION: "5.0"
+        DEVELOPMENT_TEAM: 9LA5969PJ2
+        ENABLE_HARDENED_RUNTIME: YES
     info:
       path: Info.plist
       properties:
