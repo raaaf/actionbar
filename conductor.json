@@ -1,7 +1,0 @@
-{
-    "scripts": {
-        "setup": "xcodegen generate",
-        "run": "xcodebuild -scheme ActionBar -configuration Debug build"
-    },
-    "runScriptMode": "nonconcurrent"
-}
