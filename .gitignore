@@ -3,6 +3,7 @@ ActionBar.xcodeproj/
 
 # Xcode
 DerivedData/
+build/
 *.xcuserstate
 xcuserdata/
 

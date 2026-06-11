@@ -26,3 +26,25 @@ targets:
       path: Info.plist
       properties:
         LSUIElement: true
+
+  ActionBarTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: ActionBar
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.rafaelalex.ActionBarTests
+        GENERATE_INFOPLIST_FILE: YES
+        DEVELOPMENT_TEAM: 9LA5969PJ2
+
+schemes:
+  ActionBar:
+    build:
+      targets:
+        ActionBar: all
+    test:
+      targets:
+        - ActionBarTests

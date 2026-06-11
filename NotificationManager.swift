@@ -15,11 +15,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     func requestPermission() {
         UNUserNotificationCenter.current().requestAuthorization(
             options: [.alert, .sound, .badge]
-        ) { granted, error in
-            if let error = error {
-                print("Notification permission error: \(error)")
-            }
-        }
+        ) { _, _ in }
     }
 
     // MARK: - Send notification for completed run
@@ -46,11 +42,9 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         content.title = repoName
         content.body = "\(run.resolvedName) \(conclusionText)"
 
+        content.sound = .default
         if run.conclusion == .failure {
             content.interruptionLevel = .timeSensitive
-            content.sound = .default
-        } else {
-            content.sound = .default
         }
 
         // Store the HTML URL so we can open it when clicked
@@ -73,10 +67,8 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         if let urlString = response.notification.request.content.userInfo["url"] as? String,
-           let url = URL(string: urlString),
-           url.scheme == "https",
-           url.host?.hasSuffix("github.com") == true {
-            NSWorkspace.shared.open(url)
+           let url = URL(string: urlString) {
+            url.openIfGitHub()
         }
         completionHandler()
     }

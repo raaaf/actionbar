@@ -41,6 +41,13 @@ struct MenuBarView: View {
                 SettingsWindowController.show(viewModel: viewModel)
             }
             .buttonStyle(.borderedProminent)
+
+            if let error = viewModel.error {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(20)
@@ -85,7 +92,8 @@ struct MenuBarView: View {
             if let error = viewModel.error {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.yellow)
+                        .foregroundStyle(.red)
+                        .accessibilityHidden(true)
                     Text(error)
                         .lineLimit(2)
                     Spacer()
@@ -102,6 +110,7 @@ struct MenuBarView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange)
+                        .accessibilityHidden(true)
                     Text("\(viewModel.failedRepos.count) repo\(viewModel.failedRepos.count == 1 ? "" : "s") could not be fetched")
                     Spacer()
                 }
@@ -139,7 +148,11 @@ struct MenuBarView: View {
                 .padding(.bottom, 2)
 
             ForEach(runs) { run in
-                RunRowView(run: run, viewModel: viewModel)
+                RunRowView(
+                    run: run,
+                    viewModel: viewModel,
+                    isRerunning: viewModel.isRerunning.contains(run.id)
+                )
             }
         }
     }
@@ -152,6 +165,7 @@ struct MenuBarView: View {
                 Image(systemName: "person.circle")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
                 Text(username)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -168,8 +182,14 @@ struct MenuBarView: View {
             Button {
                 Task { await viewModel.refresh() }
             } label: {
-                Image(systemName: "arrow.clockwise")
-                    .font(.caption)
+                if viewModel.isLoading {
+                    ProgressView()
+                        .controlSize(.small)
+                        .frame(width: 12, height: 12)
+                } else {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.caption)
+                }
             }
             .buttonStyle(.plain)
             .disabled(viewModel.isLoading)
@@ -234,12 +254,11 @@ struct RepoHeaderView: View {
         .onHover { hovering in
             isHovering = hovering
         }
+        .animation(.easeInOut(duration: 0.15), value: isHovering)
         .accessibilityLabel("Open \(repoName) on GitHub")
     }
 
     private func openRepoInBrowser() {
-        if let url = URL(string: "https://github.com/\(repoName)") {
-            NSWorkspace.shared.open(url)
-        }
+        URL(string: "https://github.com/\(repoName)")?.openIfGitHub()
     }
 }

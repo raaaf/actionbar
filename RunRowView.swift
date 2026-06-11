@@ -2,7 +2,11 @@ import SwiftUI
 
 struct RunRowView: View {
     let run: WorkflowRun
-    @ObservedObject var viewModel: AppViewModel
+    // Plain reference, not @ObservedObject: the row only calls methods on the view model and must not
+    // re-render on unrelated @Published changes (e.g. the 0.6s loading-icon tick). In-flight state for
+    // this specific run is passed in via `isRerunning`.
+    let viewModel: AppViewModel
+    let isRerunning: Bool
 
     @State private var isHovering = false
 
@@ -10,7 +14,7 @@ struct RunRowView: View {
         HStack(spacing: 8) {
             // Status icon
             Image(systemName: run.sfSymbol)
-                .font(.body)
+                .font(.callout)
                 .foregroundStyle(run.statusColor)
                 .frame(width: 20)
                 .accessibilityHidden(true)
@@ -48,6 +52,11 @@ struct RunRowView: View {
             if isHovering {
                 // Hover action buttons
                 hoverButtons
+            } else if isRerunning {
+                // Re-run still in flight while not hovering — keep showing progress
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(width: 16, height: 16)
             } else {
                 // Time + status
                 VStack(alignment: .trailing, spacing: 2) {
@@ -71,7 +80,16 @@ struct RunRowView: View {
         .onHover { hovering in
             isHovering = hovering
         }
+        .animation(.easeInOut(duration: 0.15), value: isHovering)
         .accessibilityLabel("\(run.resolvedName), \(run.statusLabel), \(run.timeAgo)")
+        .accessibilityActions {
+            if run.status == .completed && !isRerunning {
+                Button("Re-run workflow") {
+                    Task { await viewModel.rerunWorkflow(run) }
+                }
+            }
+            Button("Open in GitHub") { openInBrowser() }
+        }
     }
 
     // MARK: - Hover Buttons
@@ -82,7 +100,7 @@ struct RunRowView: View {
                 Button {
                     Task { await viewModel.rerunWorkflow(run) }
                 } label: {
-                    if viewModel.isRerunning.contains(run.id) {
+                    if isRerunning {
                         ProgressView()
                             .controlSize(.small)
                             .frame(width: 16, height: 16)
@@ -94,7 +112,7 @@ struct RunRowView: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
                 .help("Re-run workflow")
-                .disabled(viewModel.isRerunning.contains(run.id))
+                .disabled(isRerunning)
             }
 
             Button {
@@ -110,10 +128,6 @@ struct RunRowView: View {
     }
 
     private func openInBrowser() {
-        if let url = URL(string: run.htmlUrl),
-           url.scheme == "https",
-           url.host?.hasSuffix("github.com") == true {
-            NSWorkspace.shared.open(url)
-        }
+        URL(string: run.htmlUrl)?.openIfGitHub()
     }
 }

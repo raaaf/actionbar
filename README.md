@@ -16,7 +16,7 @@ GitHub Actions workflow runs in your macOS menu bar. Personal build, inspired by
 - macOS 26.0+
 - Xcode 16+
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen)
-- GitHub Personal Access Token — classic PAT with `repo` scope (for org repos) or fine-grained with `Actions: Read`
+- GitHub Personal Access Token — classic PAT with `repo` + `workflow` scopes (recommended, covers personal + org repos and re-running workflows), or a fine-grained PAT with `Actions: Read and write` + `Metadata: Read`
 
 ## Build & Run
 
@@ -34,7 +34,7 @@ Then build with Cmd+R in Xcode.
 3. Name: `ActionBar`
 4. Repository access: **All repositories** (or select specific ones)
 5. Permissions → **Repository permissions**:
-   - **Actions**: Read-only
+   - **Actions**: Read and write (write is needed to re-run workflows)
    - **Metadata**: Read-only (auto-granted)
 6. Generate and copy the token
 7. Paste it into ActionBar's Settings
@@ -64,4 +64,4 @@ project.yml                  # XcodeGen configuration
 - Uses `MenuBarExtra` with `.window` style for the popup
 - GitHub API is polled via `GitHubService` (Swift actor for thread safety)
 - Notifications only fire for runs that transition to completed — no spam on first load
-- Rate limiting: with 20 repos at 30s intervals, you'll use ~2400 requests/hour (GitHub allows 5000/hour for authenticated users)
+- Rate limiting: with 20 repos at 30s intervals, you'll use ~2500 requests/hour — 1 repo-list call plus up to 20 run calls per poll, 120 polls/hour (GitHub allows 5000/hour for authenticated users)

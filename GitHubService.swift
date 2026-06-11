@@ -18,6 +18,10 @@ actor GitHubService {
         return d
     }()
 
+    // Per-URL ETag + payload cache for conditional GETs. A 304 response reuses the cached
+    // payload and does not count against the GitHub rate limit.
+    private var responseCache: [String: (etag: String, data: Data)] = [:]
+
     init(token: String) {
         self.token = token
     }
@@ -116,6 +120,12 @@ actor GitHubService {
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
 
+        // Only GETs are idempotent and worth caching; send the stored ETag as a conditional request.
+        let isCacheable = method == "GET"
+        if isCacheable, let cached = responseCache[urlString] {
+            request.setValue(cached.etag, forHTTPHeaderField: "If-None-Match")
+        }
+
         let (data, response) = try await session.data(for: request)
 
         guard let http = response as? HTTPURLResponse else {
@@ -123,7 +133,16 @@ actor GitHubService {
         }
 
         switch http.statusCode {
+        case 304:
+            // Not Modified — reuse the cached payload. (Falls back to a fresh fetch next poll if absent.)
+            guard let cached = responseCache[urlString] else {
+                throw GitHubError.invalidResponse
+            }
+            return cached.data
         case 200...299:
+            if isCacheable, let etag = http.value(forHTTPHeaderField: "Etag") {
+                responseCache[urlString] = (etag, data)
+            }
             return data
         case 401:
             throw GitHubError.unauthorized

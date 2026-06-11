@@ -1,11 +1,14 @@
 import SwiftUI
 
 struct SettingsView: View {
+    static let windowSize = CGSize(width: 420, height: 320)
+
     @ObservedObject var viewModel: AppViewModel
 
     @State private var tokenInput = ""
     @State private var isAuthenticating = false
     @State private var showToken = false
+    @State private var showSignOutConfirm = false
 
     var body: some View {
         TabView {
@@ -19,7 +22,7 @@ struct SettingsView: View {
                     Label("About", systemImage: "info.circle")
                 }
         }
-        .frame(width: 420, height: 320)
+        .frame(width: Self.windowSize.width, height: Self.windowSize.height)
     }
 
     // MARK: - General Tab
@@ -35,9 +38,20 @@ struct SettingsView: View {
                             .accessibilityHidden(true)
                         Text("Authenticated as **\(viewModel.username ?? "unknown")**")
                         Spacer()
-                        Button("Sign Out") {
-                            viewModel.signOut()
-                            tokenInput = ""
+                        Button("Sign Out", role: .destructive) {
+                            showSignOutConfirm = true
+                        }
+                        .confirmationDialog(
+                            "Sign out of ActionBar?",
+                            isPresented: $showSignOutConfirm
+                        ) {
+                            Button("Sign Out", role: .destructive) {
+                                viewModel.signOut()
+                                tokenInput = ""
+                            }
+                            Button("Cancel", role: .cancel) {}
+                        } message: {
+                            Text("This removes your token from the Keychain. You'll need to paste it again to sign back in.")
                         }
                     }
                 } else {
@@ -45,7 +59,7 @@ struct SettingsView: View {
                         Text("GitHub Personal Access Token")
                             .font(.headline)
 
-                        Text("Create a fine-grained PAT with **Actions (read)** permission.")
+                        Text("Create a classic PAT with **repo** + **workflow** scopes, or a fine-grained PAT with **Actions (read & write)** + **Metadata (read)**. Write access is needed to re-run workflows.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
 
@@ -83,11 +97,10 @@ struct SettingsView: View {
 
                             Spacer()
 
-                            Link(
-                                "Create Token",
-                                destination: URL(string: "https://github.com/settings/tokens?type=beta")!
-                            )
-                            .font(.caption)
+                            if let tokenURL = URL(string: "https://github.com/settings/tokens/new") {
+                                Link("Create Token", destination: tokenURL)
+                                    .font(.caption)
+                            }
                         }
 
                         if let error = viewModel.error {
@@ -154,6 +167,7 @@ struct SettingsView: View {
             Image(systemName: "gearshape.2.fill")
                 .font(.system(size: 48))
                 .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
 
             Text("ActionBar")
                 .font(.title2)

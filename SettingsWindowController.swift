@@ -14,7 +14,7 @@ enum SettingsWindowController {
 
         let settingsView = SettingsView(viewModel: viewModel)
         let hostingView = NSHostingView(rootView: settingsView)
-        hostingView.frame = NSRect(x: 0, y: 0, width: 420, height: 320)
+        hostingView.frame = NSRect(origin: .zero, size: SettingsView.windowSize)
 
         let newWindow = NSWindow(
             contentRect: hostingView.frame,

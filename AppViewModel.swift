@@ -169,16 +169,17 @@ final class AppViewModel: ObservableObject {
     // MARK: - Notifications
 
     private func checkForCompletedRuns(newRuns: [WorkflowRun]) {
+        // Look up the runs we currently hold so the membership checks below are O(1) instead of O(n) per run.
+        let previousByID = Dictionary(runs.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+
         for run in newRuns where run.status == .completed {
             // Only notify if we haven't seen this run as completed before
             if !completedRunIDs.contains(run.id) {
                 // On first load, don't spam notifications — just record existing completed runs
                 if !runs.isEmpty {
-                    // Check if this run was previously in-progress or not yet seen
-                    let wasInProgress = runs.first(where: { $0.id == run.id })?.status != .completed
-                    let isNew = !runs.contains(where: { $0.id == run.id })
-
-                    if wasInProgress || isNew {
+                    // Notify unless our previous snapshot already showed this run as completed.
+                    // A run we hadn't seen before (previous == nil) also satisfies this and should notify.
+                    if previousByID[run.id]?.status != .completed {
                         NotificationManager.shared.notifyRunCompleted(run)
                     }
                 }
@@ -186,7 +187,8 @@ final class AppViewModel: ObservableObject {
             }
         }
 
-        // Prune old IDs to prevent memory growth — keep the most recent 300
+        // Prevent unbounded growth: once the set exceeds 500 IDs, keep the 300 most recent.
+        // GitHub run IDs increase over time, so the highest IDs are the newest runs.
         if completedRunIDs.count > 500 {
             let sortedIDs = completedRunIDs.sorted()
             completedRunIDs = Set(sortedIDs.suffix(300))

@@ -40,6 +40,8 @@ The app follows a simple MVVM pattern — all in a flat file structure at the re
 - **RunRowView.swift** — Single workflow run row with status icon, branch, event, time ago. Hover reveals action buttons (re-run, open in GitHub).
 - **SettingsView.swift** — Tabbed settings window (General + About). Token input, polling config, notification toggle.
 - **SettingsWindowController.swift** — AppKit-based window controller for opening Settings from `MenuBarExtra` context.
+- **URL+GitHub.swift** — `URL.openIfGitHub()`: opens a URL in the browser only if it is `https` on `github.com` or a subdomain. The single gate for all GitHub link opening.
+- **Tests/GitHubModelsTests.swift** — Unit tests (target `ActionBarTests`): Codable decoding, repo parsing, status/symbol mapping, Equatable. Run with `xcodebuild -scheme ActionBar test`.
 
 ## Key Patterns
 
@@ -49,5 +51,7 @@ The app follows a simple MVVM pattern — all in a flat file structure at the re
 - PAT is stored in macOS Keychain, never in UserDefaults or on disk
 - App Sandbox is enabled with outgoing network + keychain entitlements (`ActionBar.entitlements`)
 - GitHub API version header: `X-GitHub-Api-Version: 2022-11-28`
+- Conditional GETs: `GitHubService` caches ETag + payload per URL and sends `If-None-Match`; 304 responses reuse the cache and don't count against the rate limit
+- `RunRowView` holds the view model as plain `let` (not `@ObservedObject`) — rows get per-run state via value props so unrelated `@Published` changes don't re-render them
 - Menu bar icon shows failure count badge when there are failed runs
 - Runs are sorted by `updatedAt` descending, both globally and within each repo group
