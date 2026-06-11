@@ -103,6 +103,30 @@ final class GitHubModelsTests: XCTestCase {
         XCTAssertEqual(runs[1].statusLabel, "In Progress")
     }
 
+    func testDecodesRepositoryWithOpenIssuesCount() throws {
+        let json = """
+        [
+          {
+            "id": 5,
+            "full_name": "raaaf/actionbar",
+            "html_url": "https://github.com/raaaf/actionbar",
+            "pushed_at": "2026-06-11T10:00:00Z",
+            "open_issues_count": 3
+          },
+          {
+            "id": 6,
+            "full_name": "raaaf/website",
+            "html_url": "https://github.com/raaaf/website",
+            "pushed_at": null
+          }
+        ]
+        """
+        let repos = try makeDecoder().decode([Repository].self, from: Data(json.utf8))
+
+        XCTAssertEqual(repos[0].openIssuesCount, 3)
+        XCTAssertNil(repos[1].openIssuesCount)  // field absent decodes as nil, not a crash
+    }
+
     func testEquatableComparesStatusAndConclusion() throws {
         let data = Data(sampleResponse.utf8)
         let base = try makeDecoder().decode(WorkflowRunsResponse.self, from: data).workflowRuns[0]

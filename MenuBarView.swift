@@ -143,9 +143,12 @@ struct MenuBarView: View {
 
     private func repoSection(_ repoName: String, runs: [WorkflowRun]) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            RepoHeaderView(repoName: repoName)
-                .padding(.top, 8)
-                .padding(.bottom, 2)
+            RepoHeaderView(
+                repoName: repoName,
+                openIssueCount: viewModel.openIssuesByRepo[repoName] ?? 0
+            )
+            .padding(.top, 8)
+            .padding(.bottom, 2)
 
             ForEach(runs) { run in
                 RunRowView(
@@ -220,45 +223,72 @@ struct MenuBarView: View {
 
 struct RepoHeaderView: View {
     let repoName: String
+    let openIssueCount: Int
     @State private var isHovering = false
 
     var body: some View {
-        Button {
-            openRepoInBrowser()
-        } label: {
-            HStack {
-                Image(systemName: "folder.fill")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
-                Text(repoName)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(isHovering ? .primary : .secondary)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer()
-                if isHovering {
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
+        HStack(spacing: 6) {
+            Button {
+                openRepoInBrowser()
+            } label: {
+                HStack {
+                    Image(systemName: "folder.fill")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                    Text(repoName)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(isHovering ? .primary : .secondary)
+                        .accessibilityAddTraits(.isHeader)
                 }
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isHovering ? Color.primary.opacity(0.06) : .clear)
-            )
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open \(repoName) on GitHub")
+
+            if openIssueCount > 0 {
+                Button {
+                    openIssuesInBrowser()
+                } label: {
+                    Text("\(openIssueCount) issue\(openIssueCount == 1 ? "" : "s")")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.primary.opacity(0.08)))
+                }
+                .buttonStyle(.plain)
+                .help("Open issues on GitHub")
+                .accessibilityLabel("\(openIssueCount) open issues in \(repoName), open on GitHub")
+            }
+
+            Spacer()
+
+            if isHovering {
+                Image(systemName: "arrow.up.right")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
+            }
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isHovering ? Color.primary.opacity(0.06) : .clear)
+        )
         .onHover { hovering in
             isHovering = hovering
         }
         .animation(.easeInOut(duration: 0.15), value: isHovering)
-        .accessibilityLabel("Open \(repoName) on GitHub")
     }
 
     private func openRepoInBrowser() {
         URL(string: "https://github.com/\(repoName)")?.openIfGitHub()
+    }
+
+    private func openIssuesInBrowser() {
+        URL(string: "https://github.com/\(repoName)/issues")?.openIfGitHub()
     }
 }

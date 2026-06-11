@@ -15,6 +15,7 @@ final class AppViewModel: ObservableObject {
     @Published var loadingFrame: Int = 0
     @Published var failedRepos: [String] = []
     @Published var isRerunning: Set<Int> = []
+    @Published var openIssuesByRepo: [String: Int] = [:]
 
     // MARK: - Settings
 
@@ -89,6 +90,7 @@ final class AppViewModel: ObservableObject {
         username = nil
         isAuthenticated = false
         runs = []
+        openIssuesByRepo = [:]
         updateRunsByRepo()
         completedRunIDs = []
         stopPolling()
@@ -116,6 +118,7 @@ final class AppViewModel: ObservableObject {
 
             runs = result.runs
             failedRepos = result.failedRepos
+            openIssuesByRepo = result.openIssuesByRepo
             updateRunsByRepo()
             lastRefresh = .now
         } catch {

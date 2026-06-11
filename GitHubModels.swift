@@ -90,6 +90,8 @@ struct Repository: Codable, Identifiable {
     let htmlUrl: String
     let pushedAt: Date?
     let hasActions: Bool?
+    /// Note: GitHub counts open pull requests in this number as well.
+    let openIssuesCount: Int?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -97,6 +99,7 @@ struct Repository: Codable, Identifiable {
         case htmlUrl = "html_url"
         case pushedAt = "pushed_at"
         case hasActions = "has_actions"
+        case openIssuesCount = "open_issues_count"
     }
 }
 

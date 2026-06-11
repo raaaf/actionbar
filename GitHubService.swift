@@ -48,6 +48,8 @@ actor GitHubService {
     struct FetchResult {
         let runs: [WorkflowRun]
         let failedRepos: [String]
+        /// Repo fullName -> open issue count (includes PRs, as GitHub counts them as issues).
+        let openIssuesByRepo: [String: Int]
     }
 
     func fetchAllRuns(maxRepos: Int = 20, runsPerRepo: Int = 3) async throws -> FetchResult {
@@ -81,9 +83,15 @@ actor GitHubService {
             }
         }
 
+        let openIssues = Dictionary(
+            repos.map { ($0.fullName, $0.openIssuesCount ?? 0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
         return FetchResult(
             runs: allRuns.sorted { $0.updatedAt > $1.updatedAt },
-            failedRepos: failedRepos
+            failedRepos: failedRepos,
+            openIssuesByRepo: openIssues
         )
     }
 
