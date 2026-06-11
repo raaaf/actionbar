@@ -49,26 +49,20 @@ struct RunRowView: View {
 
             Spacer()
 
-            if isHovering {
-                // Hover action buttons
-                hoverButtons
-            } else if isRerunning {
-                // Re-run still in flight while not hovering — keep showing progress
-                ProgressView()
-                    .controlSize(.small)
-                    .frame(width: 16, height: 16)
-            } else {
-                // Time + status
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(run.statusLabel)
-                        .font(.caption)
-                        .fontWeight(run.conclusion == .failure ? .semibold : .regular)
-                        .foregroundStyle(run.statusColor)
+            // Always-visible action buttons — dimmed at rest, full opacity on hover or while a re-run is in flight
+            actionButtons
+                .opacity(isHovering || isRerunning ? 1 : 0.35)
 
-                    Text(run.timeAgo)
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
+            // Time + status
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(run.statusLabel)
+                    .font(.caption)
+                    .fontWeight(run.conclusion == .failure ? .semibold : .regular)
+                    .foregroundStyle(run.statusColor)
+
+                Text(run.timeAgo)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
             }
         }
         .padding(.horizontal, 8)
@@ -92,9 +86,9 @@ struct RunRowView: View {
         }
     }
 
-    // MARK: - Hover Buttons
+    // MARK: - Action Buttons
 
-    private var hoverButtons: some View {
+    private var actionButtons: some View {
         HStack(spacing: 4) {
             if run.status == .completed {
                 Button {

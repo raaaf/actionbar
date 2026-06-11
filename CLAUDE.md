@@ -37,7 +37,7 @@ The app follows a simple MVVM pattern — all in a flat file structure at the re
 - **KeychainHelper.swift** — Thin wrapper around Security framework for PAT storage (`kSecClassGenericPassword`).
 - **NotificationManager.swift** — Singleton managing `UNUserNotificationCenter`. Sends notifications on run completion, opens GitHub URL on click.
 - **MenuBarView.swift** — Main popup view: shows auth prompt, loading state, empty state, error banners, or grouped run list. Includes `RepoHeaderView` (clickable, opens repo on GitHub).
-- **RunRowView.swift** — Single workflow run row with status icon, branch, event, time ago. Hover reveals action buttons (re-run, open in GitHub).
+- **RunRowView.swift** — Single workflow run row with status icon, branch, event, time ago. Action buttons (re-run, open in GitHub) are always visible, dimmed at rest and full opacity on hover.
 - **SettingsView.swift** — Tabbed settings window (General + About). Token input, polling config, notification toggle.
 - **SettingsWindowController.swift** — AppKit-based window controller for opening Settings from `MenuBarExtra` context.
 - **URL+GitHub.swift** — `URL.openIfGitHub()`: opens a URL in the browser only if it is `https` on `github.com` or a subdomain. The single gate for all GitHub link opening.
