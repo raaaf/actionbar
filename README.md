@@ -66,3 +66,13 @@ project.yml                  # XcodeGen configuration
 - GitHub API is polled via `GitHubService` (Swift actor for thread safety)
 - Notifications only fire for runs that transition to completed — no spam on first load
 - Rate limiting: with 20 repos at 30s intervals, you'll use ~2500 requests/hour — 1 repo-list call plus up to 20 run calls per poll, 120 polls/hour (GitHub allows 5000/hour for authenticated users)
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+## Author
+
+Rafael Alex — Designer & Developer from Fürth, Germany.
+Websites, apps and AI tools, built by one person.
+[rafaelalex.de](https://rafaelalex.de) · [@raaaf](https://github.com/raaaf)
