@@ -26,7 +26,9 @@ final class AppViewModel: ObservableObject {
 
     // MARK: - Private
 
-    private var service: GitHubService?
+    // Internal (not private) so tests can inject a GitHubService backed by a stub URLSession and
+    // exercise refresh() without going through the Keychain-writing authenticate path.
+    var service: GitHubService?
     private var pollTimer: Timer?
     private var loadingTimer: Timer?
     var completedRunIDs: Set<Int> = [] // Track runs we've already notified about
@@ -35,11 +37,16 @@ final class AppViewModel: ObservableObject {
     var onNotifyRunCompleted: (WorkflowRun) -> Void = { NotificationManager.shared.notifyRunCompleted($0) }
 
     // Three distinct circular frames — no duplicates, even visual rhythm
-    private static let loadingFrames = [
+    static let loadingFrames = [
         "circle.dashed",
         "circle.dotted.and.circle",
         "circle.dotted.circle",
     ]
+
+    // Advances the loading animation index, wrapping back to the first frame.
+    static func nextLoadingFrame(_ current: Int) -> Int {
+        (current + 1) % loadingFrames.count
+    }
 
     // MARK: - Computed
 
@@ -242,7 +249,7 @@ final class AppViewModel: ObservableObject {
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.loadingFrame = (self.loadingFrame + 1) % Self.loadingFrames.count
+                self.loadingFrame = Self.nextLoadingFrame(self.loadingFrame)
             }
         }
     }

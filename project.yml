@@ -4,6 +4,11 @@ options:
   deploymentTarget:
     macOS: "26.0"
 
+packages:
+  ViewInspector:
+    url: https://github.com/nalexn/ViewInspector
+    from: 0.10.3
+
 targets:
   ActionBar:
     type: application
@@ -34,6 +39,7 @@ targets:
       - path: Tests
     dependencies:
       - target: ActionBar
+      - package: ViewInspector
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: de.rafaelalex.ActionBarTests

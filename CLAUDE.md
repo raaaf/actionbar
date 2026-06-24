@@ -20,7 +20,7 @@ xcodebuild -project ActionBar.xcodeproj -scheme ActionBar -configuration Release
 cp -R build/Build/Products/Release/ActionBar.app /Applications/
 ```
 
-Or open `ActionBar.xcodeproj` in Xcode and build with Cmd+R. The project uses [XcodeGen](https://github.com/yonaskolb/XcodeGen) to generate `ActionBar.xcodeproj` from `project.yml`. There is no SPM, CocoaPods, or other dependency manager — zero external runtime dependencies.
+Or open `ActionBar.xcodeproj` in Xcode and build with Cmd+R. The project uses [XcodeGen](https://github.com/yonaskolb/XcodeGen) to generate `ActionBar.xcodeproj` from `project.yml`. The runtime app has zero external dependencies; the only SPM package is [ViewInspector](https://github.com/nalexn/ViewInspector), declared in `project.yml` for the `ActionBarTests` target only (SwiftUI view tests).
 
 - **Apple Developer Team:** `9LA5969PJ2`
 - **Code Signing:** Automatic, Hardened Runtime enabled
@@ -41,7 +41,7 @@ The app follows a simple MVVM pattern — all in a flat file structure at the re
 - **SettingsView.swift** — Tabbed settings window (General + About). Token input, polling config, notification toggle.
 - **SettingsWindowController.swift** — AppKit-based window controller for opening Settings from `MenuBarExtra` context.
 - **URL+GitHub.swift** — `URL.openIfGitHub()`: opens a URL in the browser only if it is `https` on `github.com` or a subdomain. The single gate for all GitHub link opening.
-- **Tests/GitHubModelsTests.swift** — Unit tests (target `ActionBarTests`): Codable decoding, repo parsing, status/symbol mapping, Equatable. Run with `xcodebuild -scheme ActionBar test`.
+- **Tests/** — XCTest suite (target `ActionBarTests`), run with `xcodebuild -scheme ActionBar -destination 'platform=macOS' test`. Covers models, GitHubService (via `MockURLProtocol`), AppViewModel logic + refresh pipeline, KeychainHelper (isolated account), notifications, URL gate, and SwiftUI views (via ViewInspector). `FEATURE_AUDIT.md` is the canonical feature/test map; `MANUAL_QA.md` lists the few manual checks.
 
 ## Key Patterns
 

@@ -138,6 +138,23 @@ final class AppViewModelTests: XCTestCase {
         XCTAssertEqual(vm.menuContent, .runs)
     }
 
+    // row: vm-loading-frames
+    func testLoadingFrameCyclesAndMapsToSymbols() {
+        // Index cycles 0 -> 1 -> 2 -> 0.
+        XCTAssertEqual(AppViewModel.nextLoadingFrame(0), 1)
+        XCTAssertEqual(AppViewModel.nextLoadingFrame(1), 2)
+        XCTAssertEqual(AppViewModel.nextLoadingFrame(2), 0)
+
+        // menuBarIcon maps each frame index to its symbol while loading.
+        let vm = makeVM()
+        vm.isAuthenticated = true
+        vm.isLoading = true
+        for (index, symbol) in AppViewModel.loadingFrames.enumerated() {
+            vm.loadingFrame = index
+            XCTAssertEqual(vm.menuBarIcon, symbol, "frame \(index)")
+        }
+    }
+
     // row: vm-sign-out
     func testSignOutClearsState() {
         let vm = makeVM()
