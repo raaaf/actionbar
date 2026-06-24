@@ -9,9 +9,7 @@ final class AppViewModelRefreshTests: XCTestCase {
     }
 
     private func makeVM() -> AppViewModel {
-        let vm = AppViewModel(bootstrap: false)
-        vm.service = GitHubService(token: "tok", session: MockURLProtocol.makeSession())
-        return vm
+        AppViewModel(bootstrap: false, service: GitHubService(token: "tok", session: MockURLProtocol.makeSession()))
     }
 
     // row: vm-refresh-pipeline

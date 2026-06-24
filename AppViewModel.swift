@@ -26,9 +26,8 @@ final class AppViewModel: ObservableObject {
 
     // MARK: - Private
 
-    // Internal (not private) so tests can inject a GitHubService backed by a stub URLSession and
-    // exercise refresh() without going through the Keychain-writing authenticate path.
-    var service: GitHubService?
+    // private(set): only this class mutates it (via authenticate/loadToken); tests inject through init.
+    private(set) var service: GitHubService?
     private var pollTimer: Timer?
     private var loadingTimer: Timer?
     var completedRunIDs: Set<Int> = [] // Track runs we've already notified about
@@ -89,8 +88,10 @@ final class AppViewModel: ObservableObject {
 
     // MARK: - Init
 
-    // `bootstrap: false` skips the notification prompt and Keychain read so tests stay isolated.
-    init(bootstrap: Bool = true) {
+    // `bootstrap: false` skips the notification prompt and Keychain read so tests stay isolated;
+    // `service` lets tests inject a stub-backed GitHubService without the Keychain-writing auth path.
+    init(bootstrap: Bool = true, service: GitHubService? = nil) {
+        self.service = service
         guard bootstrap else { return }
         NotificationManager.shared.requestPermission()
         loadToken()

@@ -69,7 +69,8 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     /// Parses the stored run URL from a notification's userInfo. Pure, so it can be unit-tested;
     /// the github-host trust check happens in `URL.openIfGitHub`.
     static func notificationURL(from userInfo: [AnyHashable: Any]) -> URL? {
-        guard let urlString = userInfo["url"] as? String else { return nil }
+        // Require an https URL up front (defence in depth); the github-host check is in openIfGitHub.
+        guard let urlString = userInfo["url"] as? String, urlString.hasPrefix("https://") else { return nil }
         return URL(string: urlString)
     }
 
