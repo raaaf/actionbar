@@ -50,6 +50,7 @@ final class GitHubModelsTests: XCTestCase {
     }
     """
 
+    // row: models-run-decode
     func testDecodesWorkflowRunsResponse() throws {
         let data = Data(sampleResponse.utf8)
         let response = try makeDecoder().decode(WorkflowRunsResponse.self, from: data)
@@ -65,6 +66,7 @@ final class GitHubModelsTests: XCTestCase {
         XCTAssertEqual(first.runNumber, 42)
     }
 
+    // row: models-repo-parsing
     func testRepoOwnerAndNameParsing() throws {
         let data = Data(sampleResponse.utf8)
         let runs = try makeDecoder().decode(WorkflowRunsResponse.self, from: data).workflowRuns
@@ -103,6 +105,7 @@ final class GitHubModelsTests: XCTestCase {
         XCTAssertEqual(runs[1].statusLabel, "In Progress")
     }
 
+    // row: models-repo-decode
     func testDecodesRepositoryWithOpenIssuesCount() throws {
         let json = """
         [
@@ -127,6 +130,7 @@ final class GitHubModelsTests: XCTestCase {
         XCTAssertNil(repos[1].openIssuesCount)  // field absent decodes as nil, not a crash
     }
 
+    // row: models-equatable
     func testEquatableComparesStatusAndConclusion() throws {
         let data = Data(sampleResponse.utf8)
         let base = try makeDecoder().decode(WorkflowRunsResponse.self, from: data).workflowRuns[0]

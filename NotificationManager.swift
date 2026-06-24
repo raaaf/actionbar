@@ -21,6 +21,17 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     // MARK: - Send notification for completed run
 
     func notifyRunCompleted(_ run: WorkflowRun) {
+        let request = UNNotificationRequest(
+            identifier: "run-\(run.id)",
+            content: Self.makeContent(for: run),
+            trigger: nil // Deliver immediately
+        )
+
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    /// Builds the notification payload for a completed run. Pure (no delivery) so it can be unit-tested.
+    static func makeContent(for run: WorkflowRun) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
 
         let repoName = run.repository?.name ?? "Unknown"
@@ -50,13 +61,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         // Store the HTML URL so we can open it when clicked
         content.userInfo = ["url": run.htmlUrl]
 
-        let request = UNNotificationRequest(
-            identifier: "run-\(run.id)",
-            content: content,
-            trigger: nil // Deliver immediately
-        )
-
-        UNUserNotificationCenter.current().add(request)
+        return content
     }
 
     // MARK: - Handle notification click → open in browser

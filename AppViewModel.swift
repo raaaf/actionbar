@@ -29,7 +29,10 @@ final class AppViewModel: ObservableObject {
     private var service: GitHubService?
     private var pollTimer: Timer?
     private var loadingTimer: Timer?
-    private var completedRunIDs: Set<Int> = [] // Track runs we've already notified about
+    var completedRunIDs: Set<Int> = [] // Track runs we've already notified about
+
+    // Injectable so tests can observe notification decisions without touching UNUserNotificationCenter.
+    var onNotifyRunCompleted: (WorkflowRun) -> Void = { NotificationManager.shared.notifyRunCompleted($0) }
 
     // Three distinct circular frames — no duplicates, even visual rhythm
     private static let loadingFrames = [
@@ -56,7 +59,9 @@ final class AppViewModel: ObservableObject {
 
     // MARK: - Init
 
-    init() {
+    // `bootstrap: false` skips the notification prompt and Keychain read so tests stay isolated.
+    init(bootstrap: Bool = true) {
+        guard bootstrap else { return }
         NotificationManager.shared.requestPermission()
         loadToken()
     }
@@ -152,10 +157,15 @@ final class AppViewModel: ObservableObject {
 
     // MARK: - Polling
 
+    // Never poll faster than 15s, regardless of the configured value.
+    static func effectivePollingInterval(_ configured: Double) -> Double {
+        max(15.0, configured)
+    }
+
     func startPolling() {
         stopPolling()
         pollTimer = Timer.scheduledTimer(
-            withTimeInterval: max(15.0, pollingInterval),
+            withTimeInterval: Self.effectivePollingInterval(pollingInterval),
             repeats: true
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
@@ -171,7 +181,7 @@ final class AppViewModel: ObservableObject {
 
     // MARK: - Notifications
 
-    private func checkForCompletedRuns(newRuns: [WorkflowRun]) {
+    func checkForCompletedRuns(newRuns: [WorkflowRun]) {
         // Look up the runs we currently hold so the membership checks below are O(1) instead of O(n) per run.
         let previousByID = Dictionary(runs.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
@@ -183,7 +193,7 @@ final class AppViewModel: ObservableObject {
                     // Notify unless our previous snapshot already showed this run as completed.
                     // A run we hadn't seen before (previous == nil) also satisfies this and should notify.
                     if previousByID[run.id]?.status != .completed {
-                        NotificationManager.shared.notifyRunCompleted(run)
+                        onNotifyRunCompleted(run)
                     }
                 }
                 completedRunIDs.insert(run.id)
@@ -244,7 +254,7 @@ final class AppViewModel: ObservableObject {
         startPolling()
     }
 
-    private func updateRunsByRepo() {
+    func updateRunsByRepo() {
         let grouped = Dictionary(grouping: runs) { $0.repoFullName }
         runsByRepo = grouped
             .map { (repoName: $0.key, runs: $0.value.sorted { $0.updatedAt > $1.updatedAt }) }

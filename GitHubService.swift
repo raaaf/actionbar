@@ -4,13 +4,15 @@ actor GitHubService {
     private let baseURL = "https://api.github.com"
     private let token: String
 
-    private let session: URLSession = {
+    private let session: URLSession
+
+    private static func makeDefaultSession() -> URLSession {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 10
         config.timeoutIntervalForResource = 30
         config.requestCachePolicy = .reloadIgnoringLocalCacheData
         return URLSession(configuration: config)
-    }()
+    }
 
     private lazy var decoder: JSONDecoder = {
         let d = JSONDecoder()
@@ -22,8 +24,10 @@ actor GitHubService {
     // payload and does not count against the GitHub rate limit.
     private var responseCache: [String: (etag: String, data: Data)] = [:]
 
-    init(token: String) {
+    // `session` is injectable so tests can supply a URLProtocol-backed session; production passes nil.
+    init(token: String, session: URLSession? = nil) {
         self.token = token
+        self.session = session ?? Self.makeDefaultSession()
     }
 
     // MARK: - Fetch recently pushed repos
