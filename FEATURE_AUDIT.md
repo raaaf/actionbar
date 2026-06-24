@@ -43,28 +43,37 @@ Each row's `Test` column names the XCTest method(s) covering it; every such test
 | vm-sign-out | Sign out | As a user, signing out clears my session | `signOut` clears runs, username, openIssues, auth flag and stops polling | passing | AppViewModelTests.testSignOutClearsState | |
 | url-github-gate | GitHub URL gate | As a user, the app only opens trusted GitHub links | `isGitHubURL` is true only for https on github.com or a `.github.com` subdomain; false otherwise | passing | URLGitHubTests.testIsGitHubURLGate | |
 | notif-content | Notification content | As a user, the completion notification reads clearly | Notification content has repo as title, `<run> <conclusion text>` as body, default sound, time-sensitive level only on failure, and the run URL in userInfo | passing | NotificationContentTests.testCompletionContent | |
+| notif-open-url | Notification click target | As a user, clicking a notification opens the run | The stored URL is parsed from userInfo; missing or non-string url yields nil (host trust is the url-github-gate) | passing | NotificationContentTests.testNotificationURLResolution | Delegate wiring + actual open is manual |
+| notif-foreground | Foreground presentation | As a user, I still see notifications while the app is active | Foreground presentation options are banner+sound | passing | NotificationContentTests.testForegroundPresentationOptions | |
+| keychain-roundtrip | PAT persistence | As a user, my token is stored securely between launches | KeychainHelper save/load round-trips, a second save overwrites, delete removes the item | passing | KeychainHelperTests.testSaveLoadOverwriteDelete | Tested against an isolated account, never the real PAT item |
+| app-menubar-badge | Menu bar badge | As a user, the menu bar shows how many runs failed | Badge text is the failure count or empty; accessibility label names the count | passing | AppViewModelTests.testMenuBarBadgeAndAccessibilityLabel | |
+| vm-menu-content | Popup content state | As a user, the popup shows the right section | `menuContent` precedence: unauthenticated, then loading-while-empty, then empty, then runs | passing | AppViewModelTests.testMenuContentPrecedence | |
+| ui-issue-badge-label | Issue badge copy | As a user, the issue badge reads naturally | `RepoHeaderView.issueBadgeLabel` pluralizes issue/issues | passing | ViewCopyTests.testIssueBadgeLabelPluralizes | |
+| ui-failed-repos-label | Failed-repos banner copy | As a user, the fetch-failure banner reads naturally | `MenuBarView.failedReposLabel` pluralizes repo/repos | passing | ViewCopyTests.testFailedReposLabelPluralizes | |
 
 ## Needs human review
 
-These are user-facing features whose behaviour is UI rendering, system integration, or a side
-effect that XCTest cannot decide in this harness. They do not block audit completion.
+These are the residual features whose behaviour is pure SwiftUI/AppKit rendering or an external
+side effect that XCTest cannot decide in this harness. Their underlying logic was extracted and
+is now covered by table rows (noted below); only the visual/side-effect shell remains manual.
+They do not block audit completion.
 
-- MenuBarView: chooses among not-authenticated / loading / empty / runs-list states and renders
-  error + failed-repo banners (SwiftUI view logic; needs ViewInspector or UI tests).
-- RunRowView: action buttons always visible but dimmed at rest / full opacity on hover or during
-  re-run; accessibility actions (re-run, open). Hover/opacity is visual.
-- RepoHeaderView: hover highlight + arrow, clickable repo title opens repo, open-issue badge with
-  singular/plural label opens the issues page. Visual + side effect.
+- SwiftUI rendering of MenuBarView / RepoHeaderView / RunRowView: hover highlights, dim-at-rest
+  action opacity, arrow affordances, banner layout. The content-state selection (vm-menu-content)
+  and the banner/badge copy (ui-failed-repos-label, ui-issue-badge-label) are now tested; the
+  rendering is not.
+- RunRowView accessibility actions wiring (re-run only when completed and not re-running; open in
+  GitHub). The simple gate is visible in code; the SwiftUI `accessibilityActions` wiring is manual.
 - SettingsView: token entry with show/hide toggle, Authenticate button, sign-out confirmation
   dialog, polling/notification controls. SwiftUI form + flows.
 - SettingsWindowController: opens a single reusable AppKit settings window. AppKit side effect.
-- ActionBarApp: MenuBarExtra scene with failure-count badge label + accessibility label. Scene UI.
-- NotificationManager delegate: clicking a notification opens the run URL; foreground presentation
-  shows banner+sound. System-notification integration.
-- KeychainHelper: save/load/delete the PAT in the macOS Keychain (entitlement-dependent; an
-  unsigned test bundle cannot reliably exercise it).
+- ActionBarApp: the MenuBarExtra scene itself. Its badge text / icon / accessibility label are
+  tested (app-menubar-badge, vm-menubar-icon); the Scene wiring is manual.
 - AppViewModel.loadToken / authenticate / refresh / rerunWorkflow: end-to-end auth, polling, and
-  re-run flows (real network + Keychain).
+  re-run orchestration (real network + a real Keychain write to the shared `github-pat` item, plus
+  rerunWorkflow's 2s settle delay). Deliberately not auto-tested to avoid clobbering the user's real
+  stored PAT; the constituent pieces are covered (service-*, vm-notify-*, keychain-roundtrip).
 - AppViewModel loading-frame animation timer (0.6s tick cycling through frames). Time-based UI.
-- URL.openIfGitHub side effect (NSWorkspace.open) for allowed URLs — the gate predicate is tested
-  (url-github-gate); the actual browser-open is not.
+- URL.openIfGitHub / NotificationManager delegate side effect: NSWorkspace.open actually launching
+  the browser. The URL gate (url-github-gate) and the click-target parsing (notif-open-url) are
+  tested; the launch is not.

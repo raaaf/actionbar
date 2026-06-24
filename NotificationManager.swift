@@ -66,15 +66,22 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
     // MARK: - Handle notification click → open in browser
 
+    /// Parses the stored run URL from a notification's userInfo. Pure, so it can be unit-tested;
+    /// the github-host trust check happens in `URL.openIfGitHub`.
+    static func notificationURL(from userInfo: [AnyHashable: Any]) -> URL? {
+        guard let urlString = userInfo["url"] as? String else { return nil }
+        return URL(string: urlString)
+    }
+
+    /// Presentation options used when a notification arrives while the app is in the foreground.
+    static let foregroundPresentationOptions: UNNotificationPresentationOptions = [.banner, .sound]
+
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        if let urlString = response.notification.request.content.userInfo["url"] as? String,
-           let url = URL(string: urlString) {
-            url.openIfGitHub()
-        }
+        Self.notificationURL(from: response.notification.request.content.userInfo)?.openIfGitHub()
         completionHandler()
     }
 
@@ -85,6 +92,6 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        completionHandler([.banner, .sound])
+        completionHandler(Self.foregroundPresentationOptions)
     }
 }

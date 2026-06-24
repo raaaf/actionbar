@@ -9,15 +9,11 @@ struct ActionBarApp: App {
             MenuBarView(viewModel: viewModel)
         } label: {
             Label {
-                Text(viewModel.failureCount > 0 ? "\(viewModel.failureCount)" : "")
+                Text(viewModel.menuBarBadgeText)
             } icon: {
                 Image(systemName: viewModel.menuBarIcon)
             }
-            .accessibilityLabel(
-                viewModel.failureCount > 0
-                    ? "ActionBar, \(viewModel.failureCount) failed workflow runs"
-                    : "ActionBar"
-            )
+            .accessibilityLabel(viewModel.menuBarAccessibilityLabel)
         }
         .menuBarExtraStyle(.window)
     }

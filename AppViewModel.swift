@@ -57,6 +57,29 @@ final class AppViewModel: ObservableObject {
         return latest.sfSymbol
     }
 
+    /// Text shown next to the menu-bar icon: the failure count, or empty when nothing failed.
+    var menuBarBadgeText: String {
+        failureCount > 0 ? "\(failureCount)" : ""
+    }
+
+    /// Accessibility label for the menu-bar item.
+    var menuBarAccessibilityLabel: String {
+        failureCount > 0 ? "ActionBar, \(failureCount) failed workflow runs" : "ActionBar"
+    }
+
+    /// Which top-level section MenuBarView renders. Precedence: auth gate, then loading-while-empty,
+    /// then empty, then the runs list.
+    enum MenuContent: Equatable {
+        case unauthenticated, loading, empty, runs
+    }
+
+    var menuContent: MenuContent {
+        if !isAuthenticated { return .unauthenticated }
+        if runs.isEmpty && isLoading { return .loading }
+        if runs.isEmpty { return .empty }
+        return .runs
+    }
+
     // MARK: - Init
 
     // `bootstrap: false` skips the notification prompt and Keychain read so tests stay isolated.

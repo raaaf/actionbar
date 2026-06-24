@@ -101,6 +101,43 @@ final class AppViewModelTests: XCTestCase {
         XCTAssertEqual(AppViewModel.effectivePollingInterval(300), 300)
     }
 
+    // row: app-menubar-badge
+    func testMenuBarBadgeAndAccessibilityLabel() {
+        let vm = makeVM()
+
+        vm.runs = []
+        XCTAssertEqual(vm.menuBarBadgeText, "")
+        XCTAssertEqual(vm.menuBarAccessibilityLabel, "ActionBar")
+
+        vm.runs = [
+            Fixtures.run(id: 1, status: "completed", conclusion: "failure"),
+            Fixtures.run(id: 2, status: "completed", conclusion: "failure"),
+        ]
+        XCTAssertEqual(vm.menuBarBadgeText, "2")
+        XCTAssertEqual(vm.menuBarAccessibilityLabel, "ActionBar, 2 failed workflow runs")
+    }
+
+    // row: vm-menu-content
+    func testMenuContentPrecedence() {
+        let vm = makeVM()
+
+        vm.isAuthenticated = false
+        vm.isLoading = true
+        vm.runs = [Fixtures.run(id: 1)]
+        XCTAssertEqual(vm.menuContent, .unauthenticated, "auth gate wins")
+
+        vm.isAuthenticated = true
+        vm.runs = []
+        vm.isLoading = true
+        XCTAssertEqual(vm.menuContent, .loading, "empty + loading")
+
+        vm.isLoading = false
+        XCTAssertEqual(vm.menuContent, .empty, "empty, not loading")
+
+        vm.runs = [Fixtures.run(id: 1)]
+        XCTAssertEqual(vm.menuContent, .runs)
+    }
+
     // row: vm-sign-out
     func testSignOutClearsState() {
         let vm = makeVM()

@@ -3,15 +3,21 @@ import SwiftUI
 struct MenuBarView: View {
     @ObservedObject var viewModel: AppViewModel
 
+    /// Banner copy for repos that failed to fetch, pluralized.
+    static func failedReposLabel(_ count: Int) -> String {
+        "\(count) repo\(count == 1 ? "" : "s") could not be fetched"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if !viewModel.isAuthenticated {
+            switch viewModel.menuContent {
+            case .unauthenticated:
                 notAuthenticatedView
-            } else if viewModel.runs.isEmpty && viewModel.isLoading {
+            case .loading:
                 loadingView
-            } else if viewModel.runs.isEmpty {
+            case .empty:
                 emptyView
-            } else {
+            case .runs:
                 runsListView
             }
 
@@ -111,7 +117,7 @@ struct MenuBarView: View {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange)
                         .accessibilityHidden(true)
-                    Text("\(viewModel.failedRepos.count) repo\(viewModel.failedRepos.count == 1 ? "" : "s") could not be fetched")
+                    Text(Self.failedReposLabel(viewModel.failedRepos.count))
                     Spacer()
                 }
                 .font(.caption)
@@ -226,6 +232,11 @@ struct RepoHeaderView: View {
     let openIssueCount: Int
     @State private var isHovering = false
 
+    /// Badge copy for the open-issue count, pluralized.
+    static func issueBadgeLabel(_ count: Int) -> String {
+        "\(count) issue\(count == 1 ? "" : "s")"
+    }
+
     var body: some View {
         HStack(spacing: 6) {
             Button {
@@ -251,7 +262,7 @@ struct RepoHeaderView: View {
                 Button {
                     openIssuesInBrowser()
                 } label: {
-                    Text("\(openIssueCount) issue\(openIssueCount == 1 ? "" : "s")")
+                    Text(Self.issueBadgeLabel(openIssueCount))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 6)

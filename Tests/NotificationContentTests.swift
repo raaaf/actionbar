@@ -28,4 +28,19 @@ final class NotificationContentTests: XCTestCase {
         let failure = Fixtures.run(id: 6, conclusion: "failure")
         XCTAssertEqual(NotificationManager.makeContent(for: failure).interruptionLevel, .timeSensitive)
     }
+
+    // row: notif-open-url
+    func testNotificationURLResolution() {
+        XCTAssertEqual(
+            NotificationManager.notificationURL(from: ["url": "https://github.com/raaaf/app/actions/runs/1"]),
+            URL(string: "https://github.com/raaaf/app/actions/runs/1")
+        )
+        XCTAssertNil(NotificationManager.notificationURL(from: [:]), "missing url => nil")
+        XCTAssertNil(NotificationManager.notificationURL(from: ["url": 42]), "non-string url => nil")
+    }
+
+    // row: notif-foreground
+    func testForegroundPresentationOptions() {
+        XCTAssertEqual(NotificationManager.foregroundPresentationOptions, [.banner, .sound])
+    }
 }

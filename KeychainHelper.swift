@@ -5,7 +5,9 @@ enum KeychainHelper {
     private static let service = "de.rafaelalex.ActionBar"
     private static let account = "github-pat"
 
-    static func save(token: String) throws {
+    // `account` is parameterized (defaulting to the production account) so tests can round-trip
+    // against an isolated keychain item without touching the user's real stored PAT.
+    static func save(token: String, account: String = account) throws {
         let data = Data(token.utf8)
 
         // Delete existing item first
@@ -31,7 +33,7 @@ enum KeychainHelper {
         }
     }
 
-    static func load() -> String? {
+    static func load(account: String = account) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -50,7 +52,7 @@ enum KeychainHelper {
         return String(data: data, encoding: .utf8)
     }
 
-    static func delete() {
+    static func delete(account: String = account) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
