@@ -46,9 +46,9 @@ Dieses Log wird automatisch nach jedem Audit aktualisiert.
 - Eigene Audit-Fixes koennen neue Minor-Bugs einfuehren — Verifikationsrunde noetig.
 
 ### Vorgeschlagene Verbesserungen
-- [ ] guidelines/a11y.md (oder a11y-agent): SwiftUI-spezifische Regel — bei `onHover`-gateten Aktionen (Button erst bei Hover sichtbar) immer `.accessibilityActions` als aequivalenten Pfad fordern; nicht Redesign. Standard-Critical fuer SwiftUI-Menubar/List-UIs.
-- [ ] guidelines/security.md (oder security-agent): Host-Allowlist-Regel — `hasSuffix("github.com")` o.ae. ohne fuehrenden Punkt als Finding flaggen; verlangter Fix `host == X || host.hasSuffix("." + X)`.
-- [ ] guidelines/performance.md (oder performance-agent): SwiftUI List-Row-Regel — `@ObservedObject`/`@StateObject` eines parent-ViewModels in einer Row ist ein Re-Render-Smell; value-Props + plain `let` als Standard-Fix.
-- [ ] full-audit-agent (false-positive-Hinweis): Bei "monoton/ID-basiertem Pruning" externe Fakten pruefen (z.B. GitHub Run-IDs sind GLOBAL monoton, nicht per-repo), bevor als semantischer Bug gemeldet.
-- [ ] eval-fixture: a11y/swiftui-hover-only-control — Button nur via `.opacity(isHovering ? 1 : 0)`/onHover sichtbar, ohne `.accessibilityActions`: muss als Critical erkannt werden.
-- [ ] eval-fixture: security/host-suffix-lookalike — `url.host?.hasSuffix("github.com")` muss als unsicher (erlaubt evilgithub.com) erkannt werden; korrekter Fix verlangt fuehrenden Punkt bzw. Gleichheit.
+- [x] guidelines/a11y.md (oder a11y-agent): SwiftUI-spezifische Regel — bei `onHover`-gateten Aktionen (Button erst bei Hover sichtbar) immer `.accessibilityActions` als aequivalenten Pfad fordern; nicht Redesign. Standard-Critical fuer SwiftUI-Menubar/List-UIs. (applied 2026-09-03: guidelines/native-mobile.md section XVI)
+- [x] guidelines/security.md (oder security-agent): Host-Allowlist-Regel — `hasSuffix("github.com")` o.ae. ohne fuehrenden Punkt als Finding flaggen; verlangter Fix `host == X || host.hasSuffix("." + X)`. (applied 2026-09-03: guidelines/security.md section XIX)
+- [x] guidelines/performance.md (oder performance-agent): SwiftUI List-Row-Regel — `@ObservedObject`/`@StateObject` eines parent-ViewModels in einer Row ist ein Re-Render-Smell; value-Props + plain `let` als Standard-Fix. (applied 2026-09-03: guidelines/native-mobile.md section XVII)
+- [x] full-audit-agent (false-positive-Hinweis): Bei "monoton/ID-basiertem Pruning" externe Fakten pruefen (z.B. GitHub Run-IDs sind GLOBAL monoton, nicht per-repo), bevor als semantischer Bug gemeldet. (applied 2026-09-03: agents/finding-verifier.md, external-system facts rule)
+- [x] eval-fixture: a11y/swiftui-hover-only-control — Button nur via `.opacity(isHovering ? 1 : 0)`/onHover sichtbar, ohne `.accessibilityActions`: muss als Critical erkannt werden. (applied 2026-09-03: evals/fixtures/a11y/queue-row-delete-action.swift)
+- [x] eval-fixture: security/host-suffix-lookalike — `url.host?.hasSuffix("github.com")` muss als unsicher (erlaubt evilgithub.com) erkannt werden; korrekter Fix verlangt fuehrenden Punkt bzw. Gleichheit. (applied 2026-09-03: guidelines/security.md section XIX)
