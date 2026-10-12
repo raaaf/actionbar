@@ -52,7 +52,7 @@ actor GitHubService {
     struct FetchResult {
         let runs: [WorkflowRun]
         let failedRepos: [String]
-        /// Repo fullName -> open issue count (includes PRs, as GitHub counts them as issues).
+        /// Repo fullName -> open issue count (pull requests excluded).
         let openIssuesByRepo: [String: Int]
     }
 
@@ -87,16 +87,45 @@ actor GitHubService {
             }
         }
 
-        let openIssues = Dictionary(
-            repos.map { ($0.fullName, $0.openIssuesCount ?? 0) },
-            uniquingKeysWith: { first, _ in first }
-        )
+        // `open_issues_count` includes PRs. Repos with a non-zero count get an exact count from the
+        // issues API (ETag-cached, so unchanged repos cost a 304); on failure keep the inflated number.
+        var openIssues: [String: Int] = [:]
+        await withTaskGroup(of: (String, Int).self) { group in
+            for repo in repos {
+                let reported = repo.openIssuesCount ?? 0
+                group.addTask {
+                    guard reported > 0,
+                          let exact = try? await self.fetchOpenIssueCount(repo: repo.fullName) else {
+                        return (repo.fullName, reported)
+                    }
+                    return (repo.fullName, exact)
+                }
+            }
+            for await (name, count) in group where openIssues[name] == nil {
+                openIssues[name] = count
+            }
+        }
 
         return FetchResult(
             runs: allRuns.sorted { $0.updatedAt > $1.updatedAt },
             failedRepos: failedRepos,
             openIssuesByRepo: openIssues
         )
+    }
+
+    // MARK: - Open issues (without PRs)
+
+    private struct IssueItem: Decodable {
+        let pullRequest: PullRequestMarker?
+        struct PullRequestMarker: Decodable {}
+        enum CodingKeys: String, CodingKey { case pullRequest = "pull_request" }
+    }
+
+    /// Counts open issues on the first page (100 items); the issues endpoint also lists PRs, which carry a `pull_request` key.
+    func fetchOpenIssueCount(repo: String) async throws -> Int {
+        let url = "\(baseURL)/repos/\(repo)/issues?state=open&per_page=100"
+        let data = try await perform(url: url)
+        return try decoder.decode([IssueItem].self, from: data).filter { $0.pullRequest == nil }.count
     }
 
     // MARK: - Re-run workflow

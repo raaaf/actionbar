@@ -134,6 +134,44 @@ final class GitHubServiceTests: XCTestCase {
         XCTAssertEqual(result.openIssuesByRepo["raaaf/c"], 5)
     }
 
+    // row: service-open-issues-exclude-prs
+    func testOpenIssueCountExcludesPullRequests() async throws {
+        let reposBody = Data("""
+        [
+          {"id":1,"full_name":"raaaf/a","html_url":"https://github.com/raaaf/a","open_issues_count":3},
+          {"id":2,"full_name":"raaaf/b","html_url":"https://github.com/raaaf/b","open_issues_count":0}
+        ]
+        """.utf8)
+        // GitHub's issues API also returns PRs; those carry a "pull_request" key.
+        let issuesA = Data("""
+        [
+          {"number":1,"pull_request":{"url":"https://api.github.com/repos/raaaf/a/pulls/1"}},
+          {"number":2},
+          {"number":3,"pull_request":{"url":"https://api.github.com/repos/raaaf/a/pulls/3"}}
+        ]
+        """.utf8)
+        var issuesRequestedForB = false
+        MockURLProtocol.handler = { req in
+            switch req.url!.path {
+            case "/user/repos":
+                return (MockURLProtocol.response(req.url!, status: 200), reposBody)
+            case "/repos/raaaf/a/issues":
+                return (MockURLProtocol.response(req.url!, status: 200), issuesA)
+            case "/repos/raaaf/b/issues":
+                issuesRequestedForB = true
+                return (MockURLProtocol.response(req.url!, status: 200), Data("[]".utf8))
+            default:
+                return (MockURLProtocol.response(req.url!, status: 404), nil)
+            }
+        }
+
+        let result = try await makeService().fetchAllRuns(maxRepos: 30, runsPerRepo: 5)
+
+        XCTAssertEqual(result.openIssuesByRepo["raaaf/a"], 1, "PRs are not issues")
+        XCTAssertEqual(result.openIssuesByRepo["raaaf/b"], 0)
+        XCTAssertFalse(issuesRequestedForB, "repos without open items need no issues request")
+    }
+
     // row: service-rerun
     func testRerunWorkflowPostsToCorrectURL() async throws {
         var captured: URLRequest?

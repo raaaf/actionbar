@@ -5,7 +5,7 @@ GitHub Actions workflow runs in your macOS menu bar. Personal build, inspired by
 ## Features
 
 - Monitor workflow runs across all your GitHub repos
-- Open-issue badge per repo (click opens the issues page; GitHub counts PRs in this number)
+- Open-issue badge per repo (click opens the issues page, PRs excluded)
 - macOS notifications when runs complete (success, failure, cancelled)
 - Click any run to open it directly on GitHub
 - Configurable polling interval (15s – 5 min)
